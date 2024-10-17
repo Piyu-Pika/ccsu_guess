@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "433192217073",
+    "project_id": "ccsu-guess",
+    "storage_bucket": "ccsu-guess.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:433192217073:android:fb741350afc11665597c50",
+        "android_client_info": {
+          "package_name": "com.piyush.ccsu_guess"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA5bFjAU3aKy4Rasc7R5pPAu7DT2NCDd7o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:433192217073:android:050ad096410ec5f9597c50",
+        "android_client_info": {
+          "package_name": "com.piyush.images_upload"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA5bFjAU3aKy4Rasc7R5pPAu7DT2NCDd7o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
