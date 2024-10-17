@@ -155,7 +155,7 @@ class _SignupPageState extends State<SignupPage>
                                 decoration: InputDecoration(
                                   labelText: 'Email',
                                   prefixIcon: const Icon(Icons.email,
-                                      color: Colors.purple),
+                                      color: Colors.blue),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -181,13 +181,13 @@ class _SignupPageState extends State<SignupPage>
                                 decoration: InputDecoration(
                                   labelText: 'Password',
                                   prefixIcon: const Icon(Icons.lock,
-                                      color: Colors.purple),
+                                      color: Colors.blue),
                                   suffixIcon: IconButton(
                                     icon: Icon(
                                       _obscurePassword
                                           ? Icons.visibility
                                           : Icons.visibility_off,
-                                      color: Colors.purple,
+                                      color: Colors.blue,
                                     ),
                                     onPressed: () => setState(() =>
                                         _obscurePassword = !_obscurePassword),
@@ -215,13 +215,13 @@ class _SignupPageState extends State<SignupPage>
                                 decoration: InputDecoration(
                                   labelText: 'Confirm Password',
                                   prefixIcon: const Icon(Icons.lock_outline,
-                                      color: Colors.purple),
+                                      color: Colors.blue),
                                   suffixIcon: IconButton(
                                     icon: Icon(
                                       _obscureConfirmPassword
                                           ? Icons.visibility
                                           : Icons.visibility_off,
-                                      color: Colors.purple,
+                                      color: Colors.blue,
                                     ),
                                     onPressed: () => setState(() =>
                                         _obscureConfirmPassword =
@@ -249,7 +249,7 @@ class _SignupPageState extends State<SignupPage>
                                 onPressed: _isLoading ? null : _signup,
                                 style: ElevatedButton.styleFrom(
                                   minimumSize: const Size.fromHeight(50),
-                                  backgroundColor: Colors.purple.shade700,
+                                  backgroundColor: Colors.blue.shade700,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -258,7 +258,8 @@ class _SignupPageState extends State<SignupPage>
                                     ? const CircularProgressIndicator(
                                         color: Colors.white)
                                     : const Text('Sign Up',
-                                        style: TextStyle(fontSize: 18)),
+                                        style: TextStyle(
+                                            fontSize: 18, color: Colors.white)),
                               ),
                             ],
                           ),
@@ -307,11 +308,27 @@ class _SignupPageState extends State<SignupPage>
     return ElevatedButton(
       onPressed: _isLoading ? null : onPressed,
       style: ElevatedButton.styleFrom(
-        shape: const CircleBorder(),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
         backgroundColor: Colors.white,
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       ),
-      child: FaIcon(icon, color: color),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FaIcon(icon, color: color),
+          const SizedBox(width: 12),
+          Text(
+            'Anonymous',
+            style: TextStyle(
+              color: color,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

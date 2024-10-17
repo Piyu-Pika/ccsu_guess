@@ -234,7 +234,8 @@ class _LoginPageState extends State<LoginPage>
                                     ? const CircularProgressIndicator(
                                         color: Colors.white)
                                     : const Text('Login',
-                                        style: TextStyle(fontSize: 18)),
+                                        style: TextStyle(
+                                            fontSize: 18, color: Colors.white)),
                               ),
                             ],
                           ),
@@ -285,11 +286,27 @@ class _LoginPageState extends State<LoginPage>
     return ElevatedButton(
       onPressed: _isLoading ? null : onPressed,
       style: ElevatedButton.styleFrom(
-        shape: const CircleBorder(),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
         backgroundColor: Colors.white,
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       ),
-      child: FaIcon(icon, color: color),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FaIcon(icon, color: color),
+          const SizedBox(width: 8),
+          Text(
+            'Anonymous',
+            style: TextStyle(
+              color: color,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
