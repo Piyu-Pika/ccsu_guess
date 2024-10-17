@@ -39,6 +39,66 @@ class _HomeScreenState extends State<HomeScreen>
     super.dispose();
   }
 
+  Future<void> _showLogoutConfirmationDialog() async {
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(
+            'Confirm Logout',
+            style: GoogleFonts.roboto(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Text(
+            'Are you sure you want to logout?',
+            style: GoogleFonts.roboto(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+              },
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.roboto(
+                  color: Colors.grey,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop(); // Close the dialog
+                await FirebaseAuth.instance.signOut();
+              },
+              child: Text(
+                'Logout',
+                style: GoogleFonts.roboto(
+                  color: Colors.red,
+                ),
+              ),
+            ),
+          ],
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          elevation: 5,
+        );
+      },
+    );
+  }
+
+  Future<bool> checkUserNameExists() async {
+    User? user = _auth.currentUser;
+    if (user != null) {
+      DocumentSnapshot userDoc =
+          await _firestore.collection('users').doc(user.uid).get();
+      return userDoc.exists &&
+          (userDoc.data() as Map<String, dynamic>).containsKey('name');
+    }
+    return false;
+  }
+
   Future<void> checkAndStoreUserName(BuildContext context) async {
     User? user = _auth.currentUser;
     if (user != null) {
@@ -96,6 +156,31 @@ class _HomeScreenState extends State<HomeScreen>
     return name;
   }
 
+  Future<void> handleStartGame() async {
+    bool hasName = await checkUserNameExists();
+    if (!hasName) {
+      String? name = await _showNameInputDialog(context);
+      if (name != null && name.isNotEmpty) {
+        User? user = _auth.currentUser;
+        if (user != null) {
+          await _firestore.collection('users').doc(user.uid).set({
+            'name': name,
+            'maxScore': 0,
+          }, SetOptions(merge: true));
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => GameScreen()),
+          );
+        }
+      }
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => GameScreen()),
+      );
+    }
+  }
+
   void _showGameInfoWidget() {
     showDialog(
       context: context,
@@ -126,8 +211,8 @@ class _HomeScreenState extends State<HomeScreen>
                 child: Row(
                   children: List.generate(
                     3,
-                    (index) => Image.network(
-                      'https://thumbs.dreamstime.com/z/panorama-swimming-pool-resort-palm-trees-50008542.jpg?ct=jpeg',
+                    (index) => Image.asset(
+                      'assets/images/ccsu_cover.jpg',
                       fit: BoxFit.cover,
                       height: double.infinity,
                       width: MediaQuery.of(context).size.width,
@@ -167,7 +252,7 @@ class _HomeScreenState extends State<HomeScreen>
                           icon: const Icon(Icons.exit_to_app,
                               color: Colors.white),
                           onPressed: () {
-                            FirebaseAuth.instance.signOut();
+                            _showLogoutConfirmationDialog();
                           },
                         ),
                         IconButton(
@@ -191,7 +276,7 @@ class _HomeScreenState extends State<HomeScreen>
                         ).createShader(bounds),
                         child: Text(
                           'CCSU GUESS',
-                          style: GoogleFonts.pacifico(
+                          style: GoogleFonts.domine(
                             fontSize: 47,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
@@ -200,13 +285,13 @@ class _HomeScreenState extends State<HomeScreen>
                       ),
                       const SizedBox(height: 10),
                       Shimmer.fromColors(
-                        baseColor: Colors.white70,
+                        baseColor: Colors.black,
                         highlightColor: Colors.white,
                         child: Text(
                           'Test Your Knowledge',
                           style: GoogleFonts.roboto(
                             fontSize: 18,
-                            fontWeight: FontWeight.w300,
+                            fontWeight: FontWeight.w400,
                           ),
                         ),
                       ),
@@ -239,8 +324,11 @@ class _HomeScreenState extends State<HomeScreen>
                                   _buildButton('Leaderboard', Icons.leaderboard,
                                       Colors.green, Leaderboard()),
                                   const SizedBox(height: 15),
-                                  _buildButton('Settings', Icons.settings,
-                                      Colors.orange, const SettingsDialog()),
+                                  _buildButton(
+                                      'About Devloper',
+                                      Icons.person,
+                                      Colors.orange,
+                                      const AboutDeveloperScreen()),
                                 ],
                               ),
                             ),
@@ -281,10 +369,14 @@ class _HomeScreenState extends State<HomeScreen>
       ),
       label: Text(text),
       onPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => destinationScreen),
-        );
+        if (text == 'Start Game') {
+          handleStartGame();
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => destinationScreen),
+          );
+        }
       },
       style: ElevatedButton.styleFrom(
         backgroundColor: color,

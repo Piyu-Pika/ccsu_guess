@@ -137,9 +137,16 @@ class _LoginPageState extends State<LoginPage>
                             ),
                           ],
                         ),
-                        child: const Center(
-                          child: FlutterLogo(size: 80),
-                        ),
+                        child: Center(
+                            child: SizedBox(
+                          height: 90,
+                          width: 90,
+                          child: Image.asset(
+                            'assets/images/logo.png',
+                          ),
+                        )
+                            //FlutterLogo(size: 80),
+                            ),
                       ),
                     ),
                     const SizedBox(height: 48),

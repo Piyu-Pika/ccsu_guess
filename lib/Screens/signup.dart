@@ -127,9 +127,15 @@ class _SignupPageState extends State<SignupPage>
                             ),
                           ],
                         ),
-                        child: const Center(
-                          child: FlutterLogo(size: 80),
-                        ),
+                        child: Center(
+                            child: SizedBox(
+                          height: 90,
+                          width: 90,
+                          child:
+                              Image.asset('assets/images/logo.png', scale: 0.5),
+                        )
+                            //FlutterLogo(size: 80),
+                            ),
                       ),
                     ),
                     const SizedBox(height: 48),

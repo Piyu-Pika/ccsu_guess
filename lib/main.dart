@@ -1,6 +1,5 @@
-import 'package:ccsu_guess/Settings_provider.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+//import 'package:provider/provider.dart';
 import 'package:ccsu_guess/Screens/home_screen.dart';
 import 'package:ccsu_guess/Screens/signup.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -13,10 +12,7 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   runApp(
-    ChangeNotifierProvider(
-      create: (context) => SettingsProvider(),
-      child: const MyApp(),
-    ),
+    const MyApp(),
   );
 }
 
@@ -25,15 +21,10 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<SettingsProvider>(
-      builder: (context, settings, child) {
-        return MaterialApp(
-          debugShowCheckedModeBanner: false,
-          title: 'CCSU LOCATE',
-          theme: settings.darkMode ? ThemeData.dark() : ThemeData.light(),
-          home: const AuthWrapper(),
-        );
-      },
+    return const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'CCSU LOCATE',
+      home: AuthWrapper(),
     );
   }
 }

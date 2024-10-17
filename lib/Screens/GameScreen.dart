@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:ccsu_guess/Screens/home_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -25,7 +26,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   Timer? timer;
   final mapController = MapController();
   double currentZoom = 15.0;
-  static const double minZoom = 3.0;
+  static const double minZoom = 15.0;
   static const double maxZoom = 18.0;
   late AnimationController _controller;
   late Animation<double> _animation;
@@ -55,6 +56,30 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     });
     await loadRandomImage();
     startCountDown();
+  }
+
+  Future<void> updateScoreOnExit() async {
+    try {
+      if (currentScore > maxScore) {
+        User? user = _auth.currentUser;
+        if (user != null) {
+          // Update Firestore
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .set({
+            'maxScore': currentScore,
+            'lastUpdated': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+
+          // Update SharedPreferences
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setInt('maxScore', currentScore);
+        }
+      }
+    } catch (e) {
+      print('Error updating score on exit: $e');
+    }
   }
 
   void startCountDown() {
@@ -189,7 +214,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             heroTag: "resetZoom",
             onPressed: () {
               setState(() {
-                currentZoom = 3.0; // Reset to initial zoom level
+                currentZoom = 15.0; // Reset to initial zoom level
                 mapController.move(
                   const LatLng(
                       28.969139, 77.740111), // Reset to initial position
@@ -388,7 +413,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 
   void showResultDialog(int roundScore, double? distance) {
-    if (isGameOver) return; // Prevent multiple dialogs
+    if (isGameOver) return;
 
     showDialog(
       context: context,
@@ -409,17 +434,24 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           ),
           actions: [
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 Navigator.of(context).pop();
+
                 if (roundScore > 0 && distance != null && distance < 1000) {
                   resetRound();
                 } else {
-                  endGame();
+                  // Handle game over and navigation
+                  await updateScoreOnExit();
+                  if (mounted) {
+                    Navigator.of(context).pushReplacement(MaterialPageRoute(
+                        builder: (context) =>
+                            HomeScreen())); // Navigate to home screen
+                  }
                 }
               },
               child: Text(roundScore > 0 && distance != null && distance < 1000
                   ? 'Next Round'
-                  : 'End Game'),
+                  : 'Return to Home'),
             ),
           ],
         ),
@@ -471,11 +503,15 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     );
   }
 
-  void endGame() {
+  void endGame() async {
     setState(() {
       isGameOver = true;
     });
-    updateMaxScore();
+
+    await updateMaxScore();
+
+    if (!mounted) return;
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -497,10 +533,18 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             },
             child: const Text('Play Again'),
           ),
+          ElevatedButton(
+            onPressed: () async {
+              await updateScoreOnExit();
+              if (mounted) {
+                Navigator.of(context).pushReplacementNamed('/home_screen');
+              }
+            },
+            child: const Text('Return to Home'),
+          ),
         ],
       ),
     );
-    print('Game Over');
   }
 
   void resetGame() {
@@ -516,70 +560,120 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Score: $currentScore | Max: $maxScore'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.help_outline),
-            onPressed: () => _showHelpDialog(),
-          ),
-        ],
-      ),
       body: Stack(
         children: [
           Column(
             children: [
+              _buildScoreBar(),
               Expanded(
                 flex: 5,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    if (imageBase64 != null && !isLoading)
-                      Image.memory(
-                        gaplessPlayback: true,
-                        base64Decode(imageBase64!),
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Center(
-                            child: Text('Error loading image: $error'),
-                          );
-                        },
-                      ),
-                    if (!isLoading) _buildTimerOverlay(),
-                  ],
+                child: _buildImageSection(),
+              ),
+              Expanded(
+                flex: 5,
+                child: _buildMapSection(),
+              ),
+              _buildBottomBar(),
+            ],
+          ),
+          if (isLoading) _buildCountdownOverlay(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScoreBar() {
+    return Container(
+      padding: const EdgeInsets.only(top: 50, left: 20, right: 20, bottom: 10),
+      decoration: BoxDecoration(
+        color: Theme.of(context).primaryColor,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.stars, color: Colors.amber),
+              const SizedBox(width: 8),
+              Text(
+                'Score: $currentScore',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
-              ),
-              Expanded(
-                flex: 5,
-                child: _buildMap(),
-              ),
-              ElevatedButton(
-                onPressed: isLocationMarked ? submitGuess : null,
-                child: const Text('Submit Guess'),
               ),
             ],
           ),
-          if (isLoading)
-            Container(
-              color: Colors.black87,
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text(
-                      'Starting in...',
-                      style: TextStyle(color: Colors.white, fontSize: 24),
-                    ),
-                    Text(
-                      '$countDown',
-                      style: const TextStyle(color: Colors.white, fontSize: 48),
-                    ),
-                  ],
+          Row(
+            children: [
+              const Icon(Icons.emoji_events, color: Colors.amber),
+              const SizedBox(width: 8),
+              Text(
+                'Best: $maxScore',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
               ),
-            ),
+            ],
+          ),
+          IconButton(
+            icon: const Icon(Icons.help_outline, color: Colors.white),
+            onPressed: _showHelpDialog,
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildImageSection() {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        if (imageBase64 != null && !isLoading)
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: Theme.of(context).primaryColor.withOpacity(0.3),
+                width: 2,
+              ),
+            ),
+            child: Image.memory(
+              gaplessPlayback: true,
+              base64Decode(imageBase64!),
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.error_outline,
+                          size: 48, color: Colors.red),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Error loading image',
+                        style: TextStyle(
+                          color: Colors.red[700],
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        if (!isLoading) _buildTimerOverlay(),
+      ],
     );
   }
 
@@ -588,34 +682,192 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       children: [
         Positioned(
           top: 16,
-          left: 16,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.7),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              'Time: $remainingTime',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          top: 16,
           right: 16,
-          child: CircularProgressIndicator(
-            value: _animation.value,
-            backgroundColor: Colors.white.withOpacity(0.5),
-            valueColor: const AlwaysStoppedAnimation<Color>(Colors.red),
-            strokeWidth: 8,
+          child: Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.5),
+              shape: BoxShape.circle,
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: CircularProgressIndicator(
+                    value: _animation.value,
+                    backgroundColor: Colors.white.withOpacity(0.3),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      remainingTime > 10 ? Colors.green : Colors.red,
+                    ),
+                    strokeWidth: 4,
+                  ),
+                ),
+                Text(
+                  '$remainingTime',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildMapSection() {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: Theme.of(context).primaryColor.withOpacity(0.3),
+          width: 2,
+        ),
+      ),
+      child: Stack(
+        children: [
+          FlutterMap(
+            mapController: mapController,
+            options: MapOptions(
+              initialCenter: const LatLng(28.969139, 77.740111),
+              initialZoom: currentZoom,
+              onTap: (_, latlng) => markLocation(latlng),
+            ),
+            children: [
+              TileLayer(
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.example.app',
+                tileProvider: CancellableNetworkTileProvider(),
+              ),
+              MarkerLayer(
+                markers: _buildMarkers(),
+              ),
+            ],
+          ),
+          _buildZoomControls(),
+          if (isLocationMarked) _buildMarkerInfo(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMarkerInfo() {
+    return Positioned(
+      bottom: 70,
+      left: 16,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.location_on, color: Colors.red),
+            const SizedBox(width: 8),
+            Text(
+              'Location marked',
+              style: TextStyle(
+                color: Theme.of(context).primaryColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomBar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: ElevatedButton(
+        onPressed: isLocationMarked ? submitGuess : null,
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.check_circle_outline),
+            const SizedBox(width: 8),
+            Text(
+              isLocationMarked ? 'Submit Guess' : 'Mark a location first',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCountdownOverlay() {
+    return Container(
+      color: Colors.black.withOpacity(0.8),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              'Get Ready!',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white,
+                  width: 4,
+                ),
+              ),
+              child: Center(
+                child: Text(
+                  '$countDown',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 64,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -680,6 +932,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    updateScoreOnExit();
     timer?.cancel();
     countDownTimer?.cancel();
     _controller.dispose();
