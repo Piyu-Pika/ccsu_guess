@@ -54,6 +54,8 @@ class _HomeScreenState extends State<HomeScreen>
             'name': name,
             'maxScore': 0,
           }, SetOptions(merge: true));
+        } else {
+          _showNameInputDialog(context);
         }
       }
     }
@@ -84,12 +86,6 @@ class _HomeScreenState extends State<HomeScreen>
                 });
                 //You can also clear the TextField here if needed
                 _controller.clear();
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: const Text('Cancel'),
-              onPressed: () {
                 Navigator.of(context).pop();
               },
             ),
@@ -168,9 +164,10 @@ class _HomeScreenState extends State<HomeScreen>
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.menu, color: Colors.white),
+                          icon: const Icon(Icons.exit_to_app,
+                              color: Colors.white),
                           onPressed: () {
-                            const Drawer();
+                            FirebaseAuth.instance.signOut();
                           },
                         ),
                         IconButton(
@@ -278,7 +275,10 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildButton(
       String text, IconData icon, Color color, Widget destinationScreen) {
     return ElevatedButton.icon(
-      icon: Icon(icon),
+      icon: Icon(
+        icon,
+        color: Colors.white,
+      ),
       label: Text(text),
       onPressed: () {
         Navigator.push(
