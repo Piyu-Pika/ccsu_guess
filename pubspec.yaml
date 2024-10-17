@@ -49,6 +49,8 @@ dependencies:
   shared_preferences: ^2.3.2
   flutter_map: ^7.0.2
   flutter_map_cancellable_tile_provider: ^3.0.2
+  cached_network_image: ^3.4.1
+  firebase_storage: ^12.3.3
 
 dev_dependencies:
   flutter_test:

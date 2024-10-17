@@ -1,1 +1,25 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"ccsu-guess","appId":"1:433192217073:android:fb741350afc11665597c50","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"ccsu-guess","configurations":{"android":"1:433192217073:android:fb741350afc11665597c50","web":"1:433192217073:web:b1570bbc293c0a66597c50"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "ccsu-guess",
+          "appId": "1:433192217073:android:fb741350afc11665597c50",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "ccsu-guess",
+          "configurations": {
+            "android": "1:433192217073:android:fb741350afc11665597c50",
+            "web": "1:433192217073:web:b1570bbc293c0a66597c50"
+          }
+        }
+      }
+    }
+  },
+  "storage": {
+    "rules": "storage.rules"
+  }
+}

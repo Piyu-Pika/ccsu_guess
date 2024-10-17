@@ -536,7 +536,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   children: [
                     if (imageBase64 != null && !isLoading)
                       Image.memory(
-                        gaplessPlayback: true,
                         base64Decode(imageBase64!),
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
