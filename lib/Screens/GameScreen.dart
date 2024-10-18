@@ -466,28 +466,108 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         markedLocation!.longitude,
       );
 
+      // Game over threshold at 500 meters
+      const maxAllowedDistance = 500.0;
+
       int roundScore = 0;
-      if (distance < 10) {
+      bool isGameEnding = false;
+
+      // Scoring system based on distance
+      if (distance > maxAllowedDistance) {
+        // Location marked too far from target
+        roundScore = 0;
+        isGameEnding = true; // End game if guess is too far
+      } else if (distance < 10) {
+        // Extremely accurate guess (within 10 meters)
         roundScore = 1000;
-      } else if (distance < 100) {
+      } else if (distance < 25) {
+        // Very accurate guess (within 25 meters)
         roundScore = 750;
-      } else if (distance < 500) {
+      } else if (distance < 50) {
+        // Good guess (within 50 meters)
         roundScore = 500;
-      } else if (distance < 1000) {
+      } else if (distance < 100) {
+        // Decent guess (within 100 meters)
         roundScore = 250;
-      } else {
+      } else if (distance < maxAllowedDistance) {
+        // Within allowed range but not very accurate
         roundScore = 100;
       }
 
       setState(() {
         currentScore += roundScore;
-        consecutiveCorrect++;
+        if (roundScore > 0) {
+          consecutiveCorrect++;
+        } else {
+          consecutiveCorrect = 0;
+        }
       });
 
-      showResultDialog(roundScore, distance);
+      if (isGameEnding) {
+        showGameOverDialog(roundScore, distance);
+      } else {
+        showResultDialog(roundScore, distance);
+      }
     } else {
       showResultDialog(0, null);
     }
+  }
+
+  void showGameOverDialog(int roundScore, double distance) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => WillPopScope(
+        onWillPop: () async => false,
+        child: AlertDialog(
+          title: const Text('Game Over!'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Your guess was too far from the target location!',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Distance: ${distance.toStringAsFixed(2)} meters',
+                style: const TextStyle(fontSize: 15),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Final Score: $currentScore',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Best Score: $maxScore',
+                style: const TextStyle(fontSize: 15),
+              ),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () async {
+                await updateScoreOnExit();
+                if (mounted) {
+                  Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(builder: (context) => HomeScreen()));
+                }
+              },
+              child: const Text('Return to Home'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void showResultDialog(int roundScore, double? distance) {
