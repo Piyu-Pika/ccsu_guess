@@ -271,76 +271,81 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   ),
                   // Middle Section
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Title
-                      ShaderMask(
-                        shaderCallback: (bounds) => const LinearGradient(
-                          colors: [Colors.blue, Colors.purple],
-                        ).createShader(bounds),
-                        child: Text(
-                          'CCSU GUESS',
-                          style: GoogleFonts.domine(
-                            fontSize: 47,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Shimmer.fromColors(
-                        baseColor: Colors.black,
-                        highlightColor: Colors.white,
-                        child: Text(
-                          'Test Your Knowledge',
-                          style: GoogleFonts.roboto(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 50),
-                      // Buttons
-                      Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Colors.black26,
-                              blurRadius: 10,
-                              offset: Offset(0, 5),
+                  SingleChildScrollView(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Title
+                        ShaderMask(
+                          shaderCallback: (bounds) => const LinearGradient(
+                            colors: [Colors.blue, Colors.purple],
+                          ).createShader(bounds),
+                          child: Text(
+                            'CCSU GUESS',
+                            style: GoogleFonts.domine(
+                              fontSize: 47,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
                             ),
-                          ],
+                          ),
                         ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(20),
-                          child: BackdropFilter(
-                            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                            child: Container(
-                              padding: const EdgeInsets.all(30),
-                              color: Colors.white.withOpacity(0.2),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  _buildButton('Start Game', Icons.play_arrow,
-                                      Colors.blue, GameScreen()),
-                                  const SizedBox(height: 15),
-                                  _buildButton('Leaderboard', Icons.leaderboard,
-                                      Colors.green, Leaderboard()),
-                                  const SizedBox(height: 15),
-                                  _buildButton(
-                                      'About Devloper',
-                                      Icons.person,
-                                      Colors.orange,
-                                      const AboutDeveloperScreen()),
-                                ],
+                        const SizedBox(height: 10),
+                        Shimmer.fromColors(
+                          baseColor: Colors.black,
+                          highlightColor: Colors.white,
+                          child: Text(
+                            'Test Your Knowledge',
+                            style: GoogleFonts.roboto(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 50),
+                        // Buttons
+                        Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Colors.black26,
+                                blurRadius: 10,
+                                offset: Offset(0, 5),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(20),
+                            child: BackdropFilter(
+                              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                              child: Container(
+                                padding: const EdgeInsets.all(30),
+                                color: Colors.white.withOpacity(0.2),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    _buildButton('Start Game', Icons.play_arrow,
+                                        Colors.blue, GameScreen()),
+                                    const SizedBox(height: 15),
+                                    _buildButton(
+                                        'Leaderboard',
+                                        Icons.leaderboard,
+                                        Colors.green,
+                                        Leaderboard()),
+                                    const SizedBox(height: 15),
+                                    _buildButton(
+                                        'About Devloper',
+                                        Icons.person,
+                                        Colors.orange,
+                                        const AboutDeveloperScreen()),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                   // Bottom Section
                   Padding(

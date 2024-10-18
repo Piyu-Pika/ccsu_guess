@@ -638,25 +638,56 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          Column(
+      body: OrientationBuilder(
+        builder: (context, orientation) {
+          return Stack(
             children: [
-              _buildScoreBar(),
+              orientation == Orientation.portrait
+                  ? _buildPortraitLayout()
+                  : _buildLandscapeLayout(),
+              if (isLoading) _buildCountdownOverlay(),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildPortraitLayout() {
+    return Column(
+      children: [
+        _buildScoreBar(),
+        Expanded(
+          flex: 5,
+          child: _buildImageSection(),
+        ),
+        Expanded(
+          flex: 5,
+          child: _buildMapSection(),
+        ),
+        _buildBottomBar(),
+      ],
+    );
+  }
+
+  Widget _buildLandscapeLayout() {
+    return Column(
+      children: [
+        _buildScoreBar(),
+        Expanded(
+          child: Row(
+            children: [
               Expanded(
-                flex: 5,
                 child: _buildImageSection(),
               ),
               Expanded(
-                flex: 5,
                 child: _buildMapSection(),
               ),
-              _buildBottomBar(),
             ],
           ),
-          if (isLoading) _buildCountdownOverlay(),
-        ],
-      ),
+        ),
+        _buildBottomBar(),
+      ],
     );
   }
 
