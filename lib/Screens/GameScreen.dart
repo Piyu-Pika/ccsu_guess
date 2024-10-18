@@ -1,14 +1,17 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:ccsu_guess/Screens/home_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/src/foundation/isolates.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
+import 'package:flutter/foundation.dart' show compute;
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
@@ -41,12 +44,15 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   bool isRoundActive =
       false; // New flag to track if a round is currently active
   Set<String> usedImageIds = {}; // Track used image IDs to prevent repetition
+  bool isFirstImageLoading = true;
+  Uint8List? decodedImageBytes;
 
   @override
   void initState() {
     super.initState();
     loadMaxScore();
     initializeGame();
+    _preloadFirstImage();
   }
 
   Future<void> initializeGame() async {
@@ -56,6 +62,78 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     });
     await loadRandomImage();
     startCountDown();
+  }
+
+  Future<void> _preloadFirstImage() async {
+    try {
+      setState(() {
+        isFirstImageLoading = true;
+      });
+
+      // Get cached image from SharedPreferences if available
+      final prefs = await SharedPreferences.getInstance();
+      final cachedFirstImageId = prefs.getString('lastImageId');
+      final cachedFirstImage = prefs.getString('lastImageData');
+
+      if (cachedFirstImage != null && cachedFirstImageId != null) {
+        // Use cached image immediately while loading fresh one
+        setState(() {
+          imageBase64 = cachedFirstImage;
+          isFirstImageLoading = false;
+        });
+      }
+
+      // Load fresh image from Firestore
+      final QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+          .collection('images')
+          .limit(1) // Only get one image for initial load
+          .get();
+
+      if (querySnapshot.docs.isEmpty) {
+        print('No images found in Firestore');
+        return;
+      }
+
+      final doc = querySnapshot.docs.first;
+      final data = doc.data() as Map<String, dynamic>;
+      final base64Code = data['imageCode'];
+
+      if (base64Code != null) {
+        // Decode base64 in an isolate to prevent UI blocking
+        final bytes = await compute(
+            base64Decode as ComputeCallback<dynamic, Uint8List>, base64Code);
+
+        // Cache the image and its ID
+        await prefs.setString('lastImageId', doc.id);
+        await prefs.setString('lastImageData', base64Code);
+
+        if (!mounted) return;
+
+        setState(() {
+          imageBase64 = base64Code;
+          decodedImageBytes = bytes;
+          isFirstImageLoading = false;
+        });
+
+        // Pre-cache the image for smoother display
+        await precacheImage(MemoryImage(bytes), context);
+
+        if (data['targetLocation'] != null) {
+          final GeoPoint geoPoint = data['targetLocation'];
+          setState(() {
+            targetLocation = LatLng(geoPoint.latitude, geoPoint.longitude);
+          });
+        }
+
+        // Add to used images after successful load
+        usedImageIds.add(doc.id);
+      }
+    } catch (e) {
+      print('Error loading first image: $e');
+      setState(() {
+        isFirstImageLoading = false;
+      });
+    }
   }
 
   Future<void> updateScoreOnExit() async {
@@ -639,38 +717,75 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     return Stack(
       fit: StackFit.expand,
       children: [
-        if (imageBase64 != null && !isLoading)
+        if (isFirstImageLoading)
           Container(
             decoration: BoxDecoration(
+              color: Colors.grey[200],
               border: Border.all(
                 color: Theme.of(context).primaryColor.withOpacity(0.3),
                 width: 2,
               ),
             ),
-            child: Image.memory(
-              gaplessPlayback: true,
-              base64Decode(imageBase64!),
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error_outline,
-                          size: 48, color: Colors.red),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Error loading image',
-                        style: TextStyle(
-                          color: Colors.red[700],
-                          fontSize: 16,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
+            child: const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Loading first image...'),
+                ],
+              ),
             ),
+          )
+        else if (decodedImageBytes != null)
+          Image.memory(
+            decodedImageBytes!,
+            fit: BoxFit.cover,
+            gaplessPlayback: true,
+            errorBuilder: (context, error, stackTrace) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline,
+                        size: 48, color: Colors.red),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Error loading image',
+                      style: TextStyle(
+                        color: Colors.red[700],
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          )
+        else if (imageBase64 != null)
+          Image.memory(
+            base64Decode(imageBase64!),
+            fit: BoxFit.cover,
+            gaplessPlayback: true,
+            errorBuilder: (context, error, stackTrace) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline,
+                        size: 48, color: Colors.red),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Error loading image',
+                      style: TextStyle(
+                        color: Colors.red[700],
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
         if (!isLoading) _buildTimerOverlay(),
       ],

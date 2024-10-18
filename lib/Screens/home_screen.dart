@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:ccsu_guess/Screens/GameScreen.dart';
 import 'package:ccsu_guess/Screens/Leaderboard.dart';
 import 'package:ccsu_guess/Screens/Settings.dart';
+import 'package:ccsu_guess/Screens/login.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -57,7 +58,11 @@ class _HomeScreenState extends State<HomeScreen>
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
+                Navigator.of(context).pop();
+                Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => LoginPage())); // Close the dialog
               },
               child: Text(
                 'Cancel',
