@@ -58,12 +58,8 @@ class _HomeScreenState extends State<HomeScreen>
           actions: [
             TextButton(
               onPressed: () {
-                FirebaseAuth.instance.signOut();
                 Navigator.of(context).pop();
-                Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => LoginPage())); // Close the dialog
+                // Close the dialog
               },
               child: Text(
                 'Cancel',
@@ -76,6 +72,8 @@ class _HomeScreenState extends State<HomeScreen>
               onPressed: () async {
                 Navigator.of(context).pop(); // Close the dialog
                 await FirebaseAuth.instance.signOut();
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (context) => LoginPage()));
               },
               child: Text(
                 'Logout',
