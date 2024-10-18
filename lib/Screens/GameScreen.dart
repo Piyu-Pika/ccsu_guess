@@ -136,6 +136,36 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     }
   }
 
+  void _handleBackButton() async {
+    final shouldExit = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Exit Game?'),
+            content: const Text(
+                'Are you sure you want to exit? Your current progress will be saved.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Exit'),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.red,
+                ),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+
+    if (shouldExit && mounted) {
+      await updateScoreOnExit();
+      Navigator.of(context).pop();
+    }
+  }
+
   Future<void> updateScoreOnExit() async {
     try {
       if (currentScore > maxScore) {
@@ -726,6 +756,23 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   ? _buildPortraitLayout()
                   : _buildLandscapeLayout(),
               if (isLoading) _buildCountdownOverlay(),
+              // Add this new Positioned widget for the back button
+              Positioned(
+                top: 120,
+                left: 16,
+                child: Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.black.withOpacity(0.3),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: _handleBackButton,
+                    tooltip: 'Back',
+                    padding: const EdgeInsets.all(8),
+                  ),
+                ),
+              ),
             ],
           );
         },
