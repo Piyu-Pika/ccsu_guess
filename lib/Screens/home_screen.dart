@@ -58,6 +58,7 @@ class _HomeScreenState extends State<HomeScreen>
           actions: [
             TextButton(
               onPressed: () {
+                FirebaseAuth.instance.signOut();
                 Navigator.of(context).pop();
                 Navigator.pushReplacement(
                     context,

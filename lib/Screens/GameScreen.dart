@@ -438,7 +438,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       usedImageIds.add(random.id);
 
       final data = random.data() as Map<String, dynamic>;
-      final base64Code = data['imageCode']; // Changed from 'url' to 'imageCode'
+      final base64Code = data['imageCode'];
 
       if (base64Code != null) {
         setState(() {
