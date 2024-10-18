@@ -820,7 +820,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   Widget _buildScoreBar() {
     return Container(
-      padding: const EdgeInsets.only(top: 50, left: 20, right: 20, bottom: 10),
+      padding: const EdgeInsets.only(top: 20, left: 20, right: 20, bottom: 10),
       decoration: BoxDecoration(
         color: Theme.of(context).primaryColor,
         boxShadow: [
