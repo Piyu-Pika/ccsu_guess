@@ -1,7 +1,7 @@
 import 'dart:ui';
 import 'package:ccsu_guess/Screens/GameScreen.dart';
 import 'package:ccsu_guess/Screens/Leaderboard.dart';
-import 'package:ccsu_guess/Screens/Settings.dart';
+import 'package:ccsu_guess/Screens/DeveloperPage.dart';
 import 'package:ccsu_guess/Screens/login.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';

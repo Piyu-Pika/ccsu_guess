@@ -1120,32 +1120,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildMap() {
-    return Stack(
-      children: [
-        FlutterMap(
-          mapController: mapController,
-          options: MapOptions(
-            initialCenter: const LatLng(28.969139, 77.740111),
-            initialZoom: currentZoom,
-            onTap: (_, latlng) => markLocation(latlng),
-          ),
-          children: [
-            TileLayer(
-              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-              userAgentPackageName: 'com.example.app',
-              tileProvider: CancellableNetworkTileProvider(),
-            ),
-            MarkerLayer(
-              markers: _buildMarkers(),
-            ),
-          ],
-        ),
-        _buildZoomControls(),
-      ],
-    );
-  }
-
   List<Marker> _buildMarkers() {
     final markers = <Marker>[];
     if (markedLocation != null) {
