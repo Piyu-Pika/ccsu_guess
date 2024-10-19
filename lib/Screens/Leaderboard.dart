@@ -19,7 +19,7 @@ class Leaderboard extends StatelessWidget {
         stream: _firestore
             .collection('users')
             .orderBy('maxScore', descending: true)
-            .limit(100) // Fetch more users for pagination
+            .limit(100) // Keep limit high to find current user's position
             .snapshots(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
@@ -28,7 +28,7 @@ class Leaderboard extends StatelessWidget {
           List<DocumentSnapshot> documents = snapshot.data!.docs;
           String currentUserId = _auth.currentUser!.uid;
           int currentUserRank =
-              documents.indexWhere((doc) => doc.id == currentUserId);
+              documents.indexWhere((doc) => doc.id == currentUserId) + 1;
 
           return Column(
             children: [
@@ -57,7 +57,7 @@ class Leaderboard extends StatelessWidget {
       child: const Column(
         children: [
           Text(
-            'Top Players',
+            'Top 10 Players',
             style: TextStyle(
                 fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
           ),
@@ -73,17 +73,63 @@ class Leaderboard extends StatelessWidget {
 
   Widget _buildLeaderboardList(List<DocumentSnapshot> documents,
       String currentUserId, int currentUserRank) {
+    bool isCurrentUserInTop10 = currentUserRank <= 10;
+    int itemCount = isCurrentUserInTop10
+        ? 11 // Header + top 10
+        : 13; // Header + top 10 + divider + current user
+
     return ListView.builder(
-      itemCount: documents.length + 1, // +1 for the column headers
+      itemCount: itemCount,
       itemBuilder: (context, index) {
         if (index == 0) {
           return _buildColumnHeaders();
         }
-        index -= 1; // Adjust for the header row
-        DocumentSnapshot doc = documents[index];
-        bool isCurrentUser = doc.id == currentUserId;
-        return _buildLeaderboardItem(doc, index + 1, isCurrentUser);
+
+        index -= 1; // Adjust for header
+
+        // Show top 10
+        if (index < 10) {
+          return _buildLeaderboardItem(documents[index], index + 1,
+              documents[index].id == currentUserId);
+        }
+
+        // If current user is not in top 10, show divider and current user's position
+        if (!isCurrentUserInTop10 && index == 10) {
+          return _buildDivider();
+        }
+
+        if (!isCurrentUserInTop10 && index == 11) {
+          return _buildLeaderboardItem(
+              documents[currentUserRank - 1], currentUserRank, true);
+        }
+
+        return const SizedBox.shrink();
       },
+    );
+  }
+
+  Widget _buildDivider() {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text("• • •",
+                      style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey)),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

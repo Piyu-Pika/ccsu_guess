@@ -161,32 +161,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         false;
 
     if (shouldExit && mounted) {
-      await updateScoreOnExit();
+      await updateMaxScore();
       Navigator.of(context).pop();
-    }
-  }
-
-  Future<void> updateScoreOnExit() async {
-    try {
-      if (currentScore > maxScore) {
-        User? user = _auth.currentUser;
-        if (user != null) {
-          // Update Firestore
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.uid)
-              .set({
-            'maxScore': currentScore,
-            'lastUpdated': FieldValue.serverTimestamp(),
-          }, SetOptions(merge: true));
-
-          // Update SharedPreferences
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setInt('maxScore', currentScore);
-        }
-      }
-    } catch (e) {
-      print('Error updating score on exit: $e');
     }
   }
 
@@ -369,10 +345,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   Future<void> loadMaxScore() async {
     User? user = _auth.currentUser;
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      maxScore = prefs.getInt('maxScore') ?? 0;
-    });
+    //final prefs = await SharedPreferences.getInstance();
+    // setState(() {
+    //   maxScore = prefs.getInt('maxScore') ?? 0;
+    // });
 
     final userDoc = await FirebaseFirestore.instance
         .collection('users')
@@ -385,7 +361,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         setState(() {
           maxScore = firebaseMaxScore;
         });
-        await prefs.setInt('maxScore', maxScore);
+        // await prefs.setInt('maxScore', maxScore);
         print('Max score updated from Firebase');
       }
     }
@@ -400,8 +376,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         });
 
         // Update both SharedPreferences and Firestore
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setInt('maxScore', maxScore);
+        //  final prefs = await SharedPreferences.getInstance();
+        //await prefs.setInt('maxScore', maxScore);
 
         await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
           'maxScore': maxScore,
@@ -586,7 +562,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           actions: [
             ElevatedButton(
               onPressed: () async {
-                await updateScoreOnExit();
+                await updateMaxScore();
                 if (mounted) {
                   Navigator.of(context).pushReplacement(
                       MaterialPageRoute(builder: (context) => HomeScreen()));
@@ -629,7 +605,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   resetRound();
                 } else {
                   // Handle game over and navigation
-                  await updateScoreOnExit();
+                  await updateMaxScore();
                   if (mounted) {
                     Navigator.of(context).pushReplacement(MaterialPageRoute(
                         builder: (context) =>
@@ -723,7 +699,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           ),
           ElevatedButton(
             onPressed: () async {
-              await updateScoreOnExit();
+              await updateMaxScore();
               if (mounted) {
                 Navigator.of(context).pushReplacementNamed('/home_screen');
               }
@@ -758,7 +734,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               if (isLoading) _buildCountdownOverlay(),
               // Add this new Positioned widget for the back button
               Positioned(
-                top: 120,
+                top: 95,
                 left: 16,
                 child: Container(
                   decoration: BoxDecoration(
@@ -1205,7 +1181,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   @override
   void dispose() {
-    updateScoreOnExit();
+    updateMaxScore();
     timer?.cancel();
     countDownTimer?.cancel();
     _controller.dispose();
