@@ -2,45 +2,152 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 
-class Leaderboard extends StatelessWidget {
+class Leaderboard extends StatefulWidget {
+  @override
+  _LeaderboardState createState() => _LeaderboardState();
+}
+
+class _LeaderboardState extends State<Leaderboard> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  // Pagination variables
+  static const int pageSize = 10;
+  DocumentSnapshot? lastDocument;
+  bool hasMore = true;
+  bool isLoading = false;
+  List<DocumentSnapshot> documents = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInitialData();
+  }
+
+  Future<void> _loadInitialData() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    var snapshot = await _firestore
+        .collection('users')
+        .orderBy('maxScore', descending: true)
+        .limit(pageSize)
+        .get();
+
+    if (snapshot.docs.isNotEmpty) {
+      setState(() {
+        documents = snapshot.docs;
+        lastDocument = snapshot.docs.last;
+        hasMore = snapshot.docs.length == pageSize;
+        isLoading = false;
+      });
+    } else {
+      setState(() {
+        hasMore = false;
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadMoreData() async {
+    if (isLoading || !hasMore) return;
+
+    setState(() {
+      isLoading = true;
+    });
+
+    var snapshot = await _firestore
+        .collection('users')
+        .orderBy('maxScore', descending: true)
+        .startAfterDocument(lastDocument!)
+        .limit(pageSize)
+        .get();
+
+    if (snapshot.docs.isNotEmpty) {
+      setState(() {
+        documents.addAll(snapshot.docs);
+        lastDocument = snapshot.docs.last;
+        hasMore = snapshot.docs.length == pageSize;
+        isLoading = false;
+      });
+    } else {
+      setState(() {
+        hasMore = false;
+        isLoading = false;
+      });
+    }
+  }
+
+  void _shareScore() async {
+    DocumentSnapshot userDoc =
+        await _firestore.collection('users').doc(_auth.currentUser!.uid).get();
+
+    int userScore = userDoc['maxScore'];
+    String shareText =
+        'I scored ${NumberFormat('#,##0').format(userScore)} points on CCSU Guess! Give it a try at https://ccsu-guess.vercel.app/';
+
+    await Share.share(shareText);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Leaderboard'),
+        title: const Text('Leaderboard', style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.blue[800],
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(
+              Icons.share,
+              color: Colors.white,
+            ),
+            onPressed: _shareScore,
+          ),
+        ],
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: _firestore
-            .collection('users')
-            .orderBy('maxScore', descending: true)
-            .limit(100) // Keep limit high to find current user's position
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          List<DocumentSnapshot> documents = snapshot.data!.docs;
-          String currentUserId = _auth.currentUser!.uid;
-          int currentUserRank =
-              documents.indexWhere((doc) => doc.id == currentUserId) + 1;
+      body: Column(
+        children: [
+          _buildHeader(context),
+          _buildColumnHeaders(),
+          Expanded(
+            child: NotificationListener<ScrollNotification>(
+              onNotification: (ScrollNotification scrollInfo) {
+                if (!isLoading &&
+                    hasMore &&
+                    scrollInfo.metrics.pixels ==
+                        scrollInfo.metrics.maxScrollExtent) {
+                  _loadMoreData();
+                }
+                return true;
+              },
+              child: ListView.builder(
+                itemCount: documents.length + (hasMore ? 1 : 0),
+                itemBuilder: (context, index) {
+                  if (index == documents.length) {
+                    return _buildLoadingIndicator();
+                  }
 
-          return Column(
-            children: [
-              _buildHeader(context),
-              Expanded(
-                child: _buildLeaderboardList(
-                    documents, currentUserId, currentUserRank),
+                  DocumentSnapshot doc = documents[index];
+                  bool isCurrentUser = doc.id == _auth.currentUser!.uid;
+                  return _buildLeaderboardItem(doc, index + 1, isCurrentUser);
+                },
               ),
-            ],
-          );
-        },
+            ),
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _buildLoadingIndicator() {
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      alignment: Alignment.center,
+      child: const CircularProgressIndicator(),
     );
   }
 
@@ -57,7 +164,7 @@ class Leaderboard extends StatelessWidget {
       child: const Column(
         children: [
           Text(
-            'Top 10 Players',
+            'Top Players',
             style: TextStyle(
                 fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
           ),
@@ -65,68 +172,6 @@ class Leaderboard extends StatelessWidget {
           Text(
             'Compete to reach the top!',
             style: TextStyle(fontSize: 16, color: Colors.white70),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLeaderboardList(List<DocumentSnapshot> documents,
-      String currentUserId, int currentUserRank) {
-    bool isCurrentUserInTop10 = currentUserRank <= 10;
-    int itemCount = isCurrentUserInTop10
-        ? 11 // Header + top 10
-        : 13; // Header + top 10 + divider + current user
-
-    return ListView.builder(
-      itemCount: itemCount,
-      itemBuilder: (context, index) {
-        if (index == 0) {
-          return _buildColumnHeaders();
-        }
-
-        index -= 1; // Adjust for header
-
-        // Show top 10
-        if (index < 10) {
-          return _buildLeaderboardItem(documents[index], index + 1,
-              documents[index].id == currentUserId);
-        }
-
-        // If current user is not in top 10, show divider and current user's position
-        if (!isCurrentUserInTop10 && index == 10) {
-          return _buildDivider();
-        }
-
-        if (!isCurrentUserInTop10 && index == 11) {
-          return _buildLeaderboardItem(
-              documents[currentUserRank - 1], currentUserRank, true);
-        }
-
-        return const SizedBox.shrink();
-      },
-    );
-  }
-
-  Widget _buildDivider() {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 16),
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text("• • •",
-                      style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey)),
-                ],
-              ),
-            ),
           ),
         ],
       ),
