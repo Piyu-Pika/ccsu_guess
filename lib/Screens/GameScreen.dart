@@ -1054,6 +1054,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       child: ElevatedButton(
         onPressed: isLocationMarked ? submitGuess : null,
         style: ElevatedButton.styleFrom(
+          foregroundColor: Colors.white,
+          backgroundColor: Colors.blue,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
