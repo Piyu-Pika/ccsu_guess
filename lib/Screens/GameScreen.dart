@@ -32,9 +32,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   static const double maxZoom = 18.0;
   late AnimationController _controller;
   late Animation<double> _animation;
-  late AnimationController _submitButtonAnimationController;
-  late Animation<double> _submitButtonAnimation;
-  bool _isSubmitButtonVisible = false;
   int currentScore = 0;
   int maxScore = 0;
   int consecutiveCorrect = 0;
@@ -52,17 +49,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _submitButtonAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 500),
-      vsync: this,
-    );
-    _submitButtonAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _submitButtonAnimationController,
-      curve: Curves.easeInOut,
-    ));
     loadMaxScore();
     initializeGame();
     _preloadFirstImage();
@@ -228,8 +214,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       } else {
         timer.cancel();
         if (markedLocation == null && isRoundActive) {
-          _playAutoSubmitAnimation();
-          // autoSubmit();
+          autoSubmit();
         } else if (isRoundActive) {
           calculateScore();
         }
@@ -332,19 +317,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     setState(() {
       markedLocation = tappedPoint;
       isLocationMarked = true;
-      _isSubmitButtonVisible = true;
     });
-    _submitButtonAnimationController.forward();
     print('Location marked: $markedLocation');
-  }
-
-  void _playAutoSubmitAnimation() {
-    _submitButtonAnimationController.reverse().then((_) {
-      setState(() {
-        _isSubmitButtonVisible = false;
-      });
-      autoSubmit();
-    });
   }
 
   void submitGuess() {
@@ -1074,64 +1048,30 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           ),
         ],
       ),
-      child: AnimatedBuilder(
-        animation: _submitButtonAnimation,
-        builder: (context, child) {
-          return AnimatedOpacity(
-            duration: const Duration(milliseconds: 500),
-            opacity: _isSubmitButtonVisible ? 1.0 : 0.0,
-            child: Transform.scale(
-              scale: _submitButtonAnimation.value,
-              child: Stack(
-                children: [
-                  // Background button (time progress)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: LinearProgressIndicator(
-                      value: remainingTime / 30,
-                      minHeight: 40,
-                      backgroundColor: Colors.grey[200],
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        remainingTime > 10
-                            ? Colors.blue.withOpacity(0.3)
-                            : Colors.red.withOpacity(0.3),
-                      ),
-                    ),
-                  ),
-                  // Main button
-                  ElevatedButton(
-                    onPressed: isLocationMarked ? submitGuess : null,
-                    style: ElevatedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      backgroundColor: Colors.blue.withOpacity(0.85),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.check_circle_outline,
-                            color: Colors.white),
-                        const SizedBox(width: 8),
-                        Text(
-                          isLocationMarked
-                              ? 'Submit Guess'
-                              : 'Mark a location first',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+      child: ElevatedButton(
+        onPressed: isLocationMarked ? submitGuess : null,
+        style: ElevatedButton.styleFrom(
+          foregroundColor: Colors.white,
+          backgroundColor: Colors.blue,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.check_circle_outline, color: Colors.white),
+            const SizedBox(width: 8),
+            Text(
+              isLocationMarked ? 'Submit Guess' : 'Mark a location first',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
               ),
             ),
-          );
-        },
+          ],
+        ),
       ),
     );
   }
@@ -1218,7 +1158,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     timer?.cancel();
     countDownTimer?.cancel();
     _controller.dispose();
-    _submitButtonAnimationController.dispose();
     super.dispose();
   }
 }
