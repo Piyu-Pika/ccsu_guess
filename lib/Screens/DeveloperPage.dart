@@ -67,7 +67,7 @@ class AboutDeveloperScreen extends StatelessWidget {
                           icon: Icons.email,
                           label: "Email",
                           onPressed: () =>
-                              _launchUrl('mailto:your.email@example.com'),
+                              _launchUrl('mailto:piyushbhardwaj1603@gmail.com'),
                         ),
                         _buildSocialButton(
                           icon: Icons.code,

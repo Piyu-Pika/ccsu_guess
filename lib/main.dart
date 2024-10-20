@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-//import 'package:provider/provider.dart';
 import 'package:ccsu_guess/Screens/home_screen.dart';
 import 'package:ccsu_guess/Screens/signup.dart';
 import 'package:firebase_auth/firebase_auth.dart';
