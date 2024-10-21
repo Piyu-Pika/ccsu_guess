@@ -20,6 +20,7 @@ class AboutDeveloperScreen extends StatelessWidget {
             expandedHeight: 300.0,
             floating: false,
             pinned: true,
+            foregroundColor: Colors.white,
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
                 color: Colors.blue[700],

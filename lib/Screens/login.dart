@@ -100,6 +100,22 @@ class _LoginPageState extends State<LoginPage>
     });
   }
 
+  Future<void> _forgotPassword() async {
+    if (_emailController.text.isEmpty) {
+      _showErrorDialog('Please enter your email address first');
+      return;
+    }
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(
+        email: _emailController.text.trim(),
+      );
+      _showErrorDialog('Password reset email sent. Please check your inbox.');
+    } on FirebaseAuthException catch (e) {
+      _showErrorDialog(e.message ?? 'An error occurred');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -138,15 +154,14 @@ class _LoginPageState extends State<LoginPage>
                           ],
                         ),
                         child: Center(
-                            child: SizedBox(
-                          height: 90,
-                          width: 90,
-                          child: Image.asset(
-                            'assets/images/logo.png',
-                          ),
-                        )
-                            //FlutterLogo(size: 80),
+                          child: SizedBox(
+                            height: 90,
+                            width: 90,
+                            child: Image.asset(
+                              'assets/images/logo.png',
                             ),
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 48),
@@ -160,6 +175,7 @@ class _LoginPageState extends State<LoginPage>
                         child: Form(
                           key: _formKey,
                           child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               TextFormField(
                                 controller: _emailController,
@@ -220,7 +236,17 @@ class _LoginPageState extends State<LoginPage>
                                   return null;
                                 },
                               ),
-                              const SizedBox(height: 24),
+                              TextButton(
+                                onPressed: _forgotPassword,
+                                child: Text(
+                                  'Forgot Password?',
+                                  style: TextStyle(
+                                    color: Colors.blue.shade700,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
                               ElevatedButton(
                                 onPressed: _isLoading ? null : _login,
                                 style: ElevatedButton.styleFrom(

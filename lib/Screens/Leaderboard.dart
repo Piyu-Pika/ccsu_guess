@@ -98,6 +98,7 @@ class _LeaderboardState extends State<Leaderboard> {
       appBar: AppBar(
         title: const Text('Leaderboard', style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.blue[800],
+        foregroundColor: Colors.white,
         elevation: 0,
         actions: [
           IconButton(

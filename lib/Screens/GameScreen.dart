@@ -39,6 +39,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   bool isLocationMarked = false;
   bool isLoading = true;
   int countDown = 3;
+  int currentLevel = 1;
+  int imagesCompleted = 0;
+  int timeForCurrentLevel = 30;
+  bool showLevelUpOverlay = false;
   Timer? countDownTimer;
   bool isRoundActive =
       false; // New flag to track if a round is currently active
@@ -190,13 +194,26 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     });
   }
 
+  void updateTimeForLevel() {
+    if (imagesCompleted < 10) {
+      timeForCurrentLevel = 30;
+      currentLevel = 1;
+    } else if (imagesCompleted < 20) {
+      timeForCurrentLevel = 20;
+      currentLevel = 2;
+    } else {
+      timeForCurrentLevel = 10;
+      currentLevel = 3;
+    }
+  }
+
   void startGameTimer() {
     if (timer?.isActive ?? false) {
       timer?.cancel();
     }
 
     _controller = AnimationController(
-      duration: const Duration(seconds: 30),
+      duration: Duration(seconds: timeForCurrentLevel),
       vsync: this,
     );
     _animation = Tween(begin: 1.0, end: 0.0).animate(_controller)
@@ -205,7 +222,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       });
     _controller.forward();
 
-    remainingTime = 30;
+    remainingTime = timeForCurrentLevel;
     timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (remainingTime > 0) {
         setState(() {
@@ -624,11 +641,21 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     if (!mounted) return;
 
     setState(() {
+      imagesCompleted++;
+
+      // Check if we're moving to a new level
+      int oldLevel = currentLevel;
+      updateTimeForLevel();
+
+      if (oldLevel != currentLevel) {
+        showLevelUpOverlay = true;
+      }
+
       imageBase64 = null;
       targetLocation = null;
       markedLocation = null;
       isLocationMarked = false;
-      remainingTime = 30;
+      remainingTime = timeForCurrentLevel;
       currentZoom = 3.0;
       isRoundActive = false;
     });
@@ -637,11 +664,27 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     timer?.cancel();
     _controller.reset();
 
-    loadRandomImage().then((_) {
-      if (mounted) {
-        startCountDown();
-      }
-    });
+    if (showLevelUpOverlay) {
+      // Show level up overlay for 3 seconds before starting next round
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted) {
+          setState(() {
+            showLevelUpOverlay = false;
+          });
+          loadRandomImage().then((_) {
+            if (mounted) {
+              startCountDown();
+            }
+          });
+        }
+      });
+    } else {
+      loadRandomImage().then((_) {
+        if (mounted) {
+          startCountDown();
+        }
+      });
+    }
   }
 
   void _showHelpDialog() {
@@ -649,10 +692,94 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('How to Play'),
-        content: const Text(
-          'Look at the image and try to guess its location on the map. '
-          'Tap the map to mark your guess, then press the Submit button. '
-          'The closer you are, the more points you\'ll earn! You have 30 seconds for each round.',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Look at the image and try to guess its location on the map. '
+              'Tap the map to mark your guess, then press the Submit button. '
+              'The closer you are, the more points you\'ll earn!',
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Level System:',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[100],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    'Level 1',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text('First 10 images - 30 seconds each'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.green[100],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    'Level 2',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text('Next 10 images - 20 seconds each'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.orange[100],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    'Level 3',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text('Remaining images - 10 seconds each'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Progress through levels to test your speed and accuracy!',
+              style: TextStyle(
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -708,6 +835,50 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     );
   }
 
+  Widget _buildLevelUpOverlay() {
+    return Container(
+      color: Colors.black.withOpacity(0.8),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.arrow_upward,
+              color: Colors.yellow,
+              size: 64,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Level Up!',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Level $currentLevel',
+              style: const TextStyle(
+                color: Colors.yellow,
+                fontSize: 48,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'New Time Limit: $timeForCurrentLevel seconds',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void resetGame() {
     setState(() {
       currentScore = 0;
@@ -720,35 +891,38 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: OrientationBuilder(
-        builder: (context, orientation) {
-          return Stack(
-            children: [
-              orientation == Orientation.portrait
-                  ? _buildPortraitLayout()
-                  : _buildLandscapeLayout(),
-              if (isLoading) _buildCountdownOverlay(),
-              // Add this new Positioned widget for the back button
-              Positioned(
-                top: 95,
-                left: 16,
-                child: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.black.withOpacity(0.3),
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    onPressed: _handleBackButton,
-                    tooltip: 'Back',
-                    padding: const EdgeInsets.all(8),
+    return SafeArea(
+      child: Scaffold(
+        body: OrientationBuilder(
+          builder: (context, orientation) {
+            return Stack(
+              children: [
+                orientation == Orientation.portrait
+                    ? _buildPortraitLayout()
+                    : _buildLandscapeLayout(),
+                if (isLoading) _buildCountdownOverlay(),
+                if (showLevelUpOverlay) _buildLevelUpOverlay(),
+                // Add this new Positioned widget for the back button
+                Positioned(
+                  top: 95,
+                  left: 16,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.black.withOpacity(0.3),
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      onPressed: _handleBackButton,
+                      tooltip: 'Back',
+                      padding: const EdgeInsets.all(8),
+                    ),
                   ),
                 ),
-              ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
   }
