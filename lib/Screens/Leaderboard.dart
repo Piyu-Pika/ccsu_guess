@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
+import 'dart:convert'; // Add this for base64 handling
 
 class Leaderboard extends StatefulWidget {
   @override
@@ -204,8 +205,13 @@ class _LeaderboardState extends State<Leaderboard> {
 
   Widget _buildLeaderboardItem(
       DocumentSnapshot doc, int rank, bool isCurrentUser) {
-    String name = doc['name'];
-    int score = doc['maxScore'];
+    // Use null-aware operator to safely access the data
+    final data = doc.data() as Map<String, dynamic>?;
+    if (data == null) return const SizedBox.shrink();
+
+    String name = data['name'] ?? 'Unknown';
+    int score = data['maxScore'] ?? 0;
+    String? profilePic = data['profilePic']; // Get base64 profile picture
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
@@ -227,7 +233,7 @@ class _LeaderboardState extends State<Leaderboard> {
             flex: 3,
             child: Row(
               children: [
-                _buildAvatar(name, isCurrentUser),
+                _buildAvatar(name, isCurrentUser, profilePic),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -254,12 +260,53 @@ class _LeaderboardState extends State<Leaderboard> {
     );
   }
 
-  Widget _buildAvatar(String name, bool isCurrentUser) {
+  Widget _buildAvatar(
+      String name, bool isCurrentUser, String? profilePicBase64) {
+    // Check if profilePic is null or empty
+    if (profilePicBase64 == null || profilePicBase64.isEmpty) {
+      return _buildNameAvatar(name, isCurrentUser);
+    }
+
+    try {
+      // Try to decode the base64 string
+      final imageBytes = base64Decode(profilePicBase64);
+
+      return CircleAvatar(
+        backgroundColor: Colors.grey[300],
+        radius: 20,
+        child: ClipOval(
+          child: Image.memory(
+            imageBytes,
+            fit: BoxFit.cover,
+            width: 40,
+            height: 40,
+            errorBuilder: (context, error, stackTrace) {
+              // If there's an error loading the image, fall back to name avatar
+              return _buildNameInitial(name, isCurrentUser);
+            },
+          ),
+        ),
+      );
+    } catch (e) {
+      // If base64 decoding fails, fall back to name avatar
+      return _buildNameAvatar(name, isCurrentUser);
+    }
+  }
+
+  Widget _buildNameAvatar(String name, bool isCurrentUser) {
     return CircleAvatar(
       backgroundColor: isCurrentUser ? Colors.blue : Colors.grey[300],
-      child: Text(
-        name.substring(0, 1).toUpperCase(),
-        style: TextStyle(color: isCurrentUser ? Colors.white : Colors.black),
+      radius: 20,
+      child: _buildNameInitial(name, isCurrentUser),
+    );
+  }
+
+  Widget _buildNameInitial(String name, bool isCurrentUser) {
+    return Text(
+      name.isNotEmpty ? name.substring(0, 1).toUpperCase() : '?',
+      style: TextStyle(
+        color: isCurrentUser ? Colors.white : Colors.black,
+        fontWeight: FontWeight.bold,
       ),
     );
   }

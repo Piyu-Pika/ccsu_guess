@@ -10,6 +10,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shimmer/shimmer.dart';
 import '../Widget/Infowidget.dart';
+import '../Widget/Profile.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -253,10 +254,14 @@ class _HomeScreenState extends State<HomeScreen>
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.exit_to_app,
+                          icon: const Icon(Icons.person_rounded,
                               color: Colors.white),
                           onPressed: () {
-                            _showLogoutConfirmationDialog();
+                            showDialog(
+                              context: context,
+                              builder: (context) => const ProfileDialog(),
+                            );
+                            // _showLogoutConfirmationDialog();
                           },
                         ),
                         IconButton(

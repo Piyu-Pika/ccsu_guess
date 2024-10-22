@@ -49,6 +49,8 @@ dependencies:
   flutter_map_cancellable_tile_provider: ^3.0.2
   url_launcher: ^6.3.1
   share_plus: ^10.1.0
+  image_picker: ^1.1.2
+  cached_network_image: ^3.4.1
 
 dev_dependencies:
   flutter_launcher_icons: "^0.14.1"
