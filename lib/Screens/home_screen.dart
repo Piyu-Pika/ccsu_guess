@@ -2,7 +2,6 @@ import 'dart:ui';
 import 'package:ccsu_guess/Screens/GameScreen.dart';
 import 'package:ccsu_guess/Screens/Leaderboard.dart';
 import 'package:ccsu_guess/Screens/DeveloperPage.dart';
-import 'package:ccsu_guess/Screens/login.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -41,58 +40,6 @@ class _HomeScreenState extends State<HomeScreen>
     super.dispose();
   }
 
-  Future<void> _showLogoutConfirmationDialog() async {
-    return showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(
-            'Confirm Logout',
-            style: GoogleFonts.roboto(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: Text(
-            'Are you sure you want to logout?',
-            style: GoogleFonts.roboto(),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                // Close the dialog
-              },
-              child: Text(
-                'Cancel',
-                style: GoogleFonts.roboto(
-                  color: Colors.grey,
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () async {
-                Navigator.of(context).pop(); // Close the dialog
-                await FirebaseAuth.instance.signOut();
-                Navigator.push(context,
-                    MaterialPageRoute(builder: (context) => LoginPage()));
-              },
-              child: Text(
-                'Logout',
-                style: GoogleFonts.roboto(
-                  color: Colors.red,
-                ),
-              ),
-            ),
-          ],
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-          elevation: 5,
-        );
-      },
-    );
-  }
-
   Future<bool> checkUserNameExists() async {
     User? user = _auth.currentUser;
     if (user != null) {
@@ -112,7 +59,6 @@ class _HomeScreenState extends State<HomeScreen>
 
       if (!userDoc.exists ||
           !(userDoc.data() as Map<String, dynamic>).containsKey('name')) {
-        // Name doesn't exist, prompt user to enter name
         String? name = await _showNameInputDialog(context);
         if (name != null && name.isNotEmpty) {
           await _firestore.collection('users').doc(user.uid).set({
@@ -149,7 +95,6 @@ class _HomeScreenState extends State<HomeScreen>
                 setState(() {
                   _isSubmitted = true;
                 });
-                //You can also clear the TextField here if needed
                 _controller.clear();
                 Navigator.of(context).pop();
               },
@@ -205,7 +150,7 @@ class _HomeScreenState extends State<HomeScreen>
     return Scaffold(
       body: Stack(
         children: [
-          // Parallax Scrolling Panorama Image
+          
           AnimatedBuilder(
             animation: _controller,
             builder: (_, child) {
@@ -227,7 +172,6 @@ class _HomeScreenState extends State<HomeScreen>
               );
             },
           ),
-          // Gradient Overlay
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -241,13 +185,11 @@ class _HomeScreenState extends State<HomeScreen>
               ),
             ),
           ),
-          // Content
           SafeArea(
             child: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Top Section
                   Padding(
                     padding: const EdgeInsets.only(top: 20),
                     child: Row(
@@ -261,7 +203,6 @@ class _HomeScreenState extends State<HomeScreen>
                               context: context,
                               builder: (context) => const ProfileDialog(),
                             );
-                            // _showLogoutConfirmationDialog();
                           },
                         ),
                         IconButton(

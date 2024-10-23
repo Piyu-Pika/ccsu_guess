@@ -22,7 +22,6 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'CCSU LOCATE',
       theme: ThemeData(primaryColor: Colors.blue),
       home: const AuthWrapper(),
     );

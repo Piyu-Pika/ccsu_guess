@@ -44,9 +44,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   int timeForCurrentLevel = 30;
   bool showLevelUpOverlay = false;
   Timer? countDownTimer;
-  bool isRoundActive =
-      false; // New flag to track if a round is currently active
-  Set<String> usedImageIds = {}; // Track used image IDs to prevent repetition
+  bool isRoundActive = false;
+  Set<String> usedImageIds = {};
   bool isFirstImageLoading = true;
   Uint8List? decodedImageBytes;
 
@@ -87,10 +86,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       }
 
       // Load fresh image from Firestore
-      final QuerySnapshot querySnapshot = await FirebaseFirestore.instance
-          .collection('images')
-          .limit(1) // Only get one image for initial load
-          .get();
+      final QuerySnapshot querySnapshot =
+          await FirebaseFirestore.instance.collection('images').limit(1).get();
 
       if (querySnapshot.docs.isEmpty) {
         print('No images found in Firestore');
@@ -102,11 +99,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       final base64Code = data['imageCode'];
 
       if (base64Code != null) {
-        // Decode base64 in an isolate to prevent UI blocking
         final bytes = await compute(
             base64Decode as ComputeCallback<dynamic, Uint8List>, base64Code);
 
-        // Cache the image and its ID
         await prefs.setString('lastImageId', doc.id);
         await prefs.setString('lastImageData', base64Code);
 
@@ -361,10 +356,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   Future<void> loadMaxScore() async {
     User? user = _auth.currentUser;
-    //final prefs = await SharedPreferences.getInstance();
-    // setState(() {
-    //   maxScore = prefs.getInt('maxScore') ?? 0;
-    // });
 
     final userDoc = await FirebaseFirestore.instance
         .collection('users')
@@ -377,7 +368,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         setState(() {
           maxScore = firebaseMaxScore;
         });
-        // await prefs.setInt('maxScore', maxScore);
         print('Max score updated from Firebase');
       }
     }
@@ -390,10 +380,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         setState(() {
           maxScore = currentScore;
         });
-
-        // Update both SharedPreferences and Firestore
-        //  final prefs = await SharedPreferences.getInstance();
-        //await prefs.setInt('maxScore', maxScore);
 
         await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
           'maxScore': maxScore,

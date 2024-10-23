@@ -128,7 +128,8 @@ class _ProfileDialogState extends State<ProfileDialog> {
                                 )
                               : null,
                           child: _profilePicBase64 == null
-                              ? const Icon(Icons.person, size: 50)
+                              ? const Icon(Icons.account_circle_outlined,
+                                  size: 50)
                               : null,
                         ),
                         Positioned(
@@ -184,8 +185,9 @@ class _ProfileDialogState extends State<ProfileDialog> {
                         ),
                       ),
                       TextButton.icon(
-                        icon: const Icon(Icons.edit),
-                        label: const Text('Edit Username'),
+                        icon: const Icon(Icons.edit, color: Colors.black),
+                        label: const Text('Edit Username',
+                            style: TextStyle(color: Colors.black)),
                         onPressed: () {
                           setState(() => _isEditing = true);
                         },
@@ -201,7 +203,7 @@ class _ProfileDialogState extends State<ProfileDialog> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
-                      icon: const Icon(Icons.logout),
+                      icon: const Icon(Icons.logout, color: Colors.white),
                       label: const Text('Logout'),
                       onPressed: _logout,
                     ),
