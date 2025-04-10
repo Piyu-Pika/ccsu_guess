@@ -21,6 +21,11 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   String? imageBase64;
+  List<Map<String, dynamic>> imageQueue = [];
+  bool isNextImageLoading = false;
+  Uint8List? nextDecodedImageBytes;
+  String? nextImageBase64;
+  LatLng? nextTargetLocation;
   LatLng? targetLocation;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   LatLng? markedLocation;
@@ -125,6 +130,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
         // Add to used images after successful load
         usedImageIds.add(doc.id);
+        loadRandomImage();
       }
     } catch (e) {
       print('Error loading first image: $e');
@@ -336,6 +342,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   void submitGuess() {
     if (markedLocation != null) {
       calculateScore();
+      resetRound();
+      loadRandomImage();
     } else {
       showDialog(
         context: context,
@@ -393,46 +401,140 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   Future<void> loadRandomImage() async {
     try {
-      final QuerySnapshot querySnapshot =
-          await FirebaseFirestore.instance.collection('images').get();
+      // If we have a preloaded next image, use that immediately
+      if (nextImageBase64 != null) {
+        setState(() {
+          imageBase64 = nextImageBase64;
+          decodedImageBytes = nextDecodedImageBytes;
+          targetLocation = nextTargetLocation;
+          nextImageBase64 = null;
+          nextDecodedImageBytes = null;
+          nextTargetLocation = null;
+        });
 
-      if (querySnapshot.docs.isEmpty) {
-        print('No images found in Firestore');
+        // Preload the next image in the background
+        _preloadNextImage();
         return;
       }
 
-      final availableDocs = querySnapshot.docs
-          .where((doc) => !usedImageIds.contains(doc.id))
-          .toList();
+      // If we have images in queue, use them first
+      if (imageQueue.isNotEmpty) {
+        final nextImage = imageQueue.removeAt(0);
+        _processImageData(nextImage);
 
-      if (availableDocs.isEmpty) {
+        // Preload the next image in the background
+        _preloadNextImage();
+        return;
+      }
+
+      // Otherwise load fresh from Firestore
+      final QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+          .collection('images')
+          .where(FieldPath.documentId,
+              whereNotIn: usedImageIds.isEmpty ? null : usedImageIds.toList())
+          .limit(10) // Load multiple at once for the queue
+          .get();
+
+      if (querySnapshot.docs.isEmpty) {
+        print('No images found in Firestore');
+        // If no images left, reset used images and try again
         usedImageIds.clear();
-        availableDocs.addAll(querySnapshot.docs);
+        loadRandomImage();
+        return;
       }
 
-      final random = availableDocs[
-          DateTime.now().microsecondsSinceEpoch % availableDocs.length];
-
-      usedImageIds.add(random.id);
-
-      final data = random.data() as Map<String, dynamic>;
-      final base64Code = data['imageCode'];
-
-      if (base64Code != null) {
-        setState(() {
-          imageBase64 = base64Code;
-        });
+      // Add all new images to our queue
+      for (var doc in querySnapshot.docs) {
+        if (!usedImageIds.contains(doc.id)) {
+          imageQueue
+              .add({'id': doc.id, 'data': doc.data() as Map<String, dynamic>});
+        }
       }
 
-      if (data['targetLocation'] != null) {
-        print(data['targetLocation']);
-        final GeoPoint geoPoint = data['targetLocation'];
-        setState(() {
-          targetLocation = LatLng(geoPoint.latitude, geoPoint.longitude);
-        });
+      // Process the first image from queue
+      if (imageQueue.isNotEmpty) {
+        final nextImage = imageQueue.removeAt(0);
+        _processImageData(nextImage);
+
+        // Preload the next image in the background
+        _preloadNextImage();
       }
     } catch (e) {
       print('Error loading random image: $e');
+    }
+  }
+
+// This is a helper function that will be used with compute
+// It needs to match the expected signature exactly
+  Uint8List decodeBase64Isolate(dynamic input) {
+    return base64Decode(input as String);
+  }
+
+  void _processImageData(Map<String, dynamic> imageData) {
+    final data = imageData['data'];
+    final base64Code = data['imageCode'];
+    final docId = imageData['id'];
+
+    if (base64Code != null) {
+      // Use the helper function with compute
+      compute(decodeBase64Isolate, base64Code).then((bytes) {
+        if (!mounted) return;
+
+        setState(() {
+          imageBase64 = base64Code;
+          decodedImageBytes = bytes;
+          usedImageIds.add(docId);
+        });
+
+        // Pre-cache the image for smoother display
+        precacheImage(MemoryImage(bytes), context);
+
+        if (data['targetLocation'] != null) {
+          final GeoPoint geoPoint = data['targetLocation'];
+          setState(() {
+            targetLocation = LatLng(geoPoint.latitude, geoPoint.longitude);
+          });
+        }
+      });
+    }
+  }
+
+// New method to preload the next image in background
+  Future<void> _preloadNextImage() async {
+    if (isNextImageLoading || imageQueue.isEmpty) return;
+
+    isNextImageLoading = true;
+
+    try {
+      final nextImage = imageQueue[0];
+      final data = nextImage['data'];
+      final base64Code = data['imageCode'];
+
+      if (base64Code != null) {
+        final bytes = await compute(
+            base64Decode as ComputeCallback<dynamic, Uint8List>, base64Code);
+
+        if (!mounted) {
+          isNextImageLoading = false;
+          return;
+        }
+
+        // Store the preloaded image
+        nextImageBase64 = base64Code;
+        nextDecodedImageBytes = bytes;
+
+        if (data['targetLocation'] != null) {
+          final GeoPoint geoPoint = data['targetLocation'];
+          nextTargetLocation = LatLng(geoPoint.latitude, geoPoint.longitude);
+        }
+
+        // Pre-cache the next image
+        precacheImage(MemoryImage(bytes), context);
+      }
+    } catch (e) {
+      print('Error preloading next image: $e');
+    } finally {
+      isNextImageLoading = false;
     }
   }
 
@@ -465,6 +567,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     setState(() {
       isRoundActive = false; // Mark round as inactive
     });
+    _preloadNextImage();
 
     if (targetLocation != null && markedLocation != null) {
       final distance = Geolocator.distanceBetween(
@@ -628,17 +731,14 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
     setState(() {
       imagesCompleted++;
+      updateTimeForLevel();
 
       // Check if we're moving to a new level
       int oldLevel = currentLevel;
-      updateTimeForLevel();
-
       if (oldLevel != currentLevel) {
         showLevelUpOverlay = true;
       }
 
-      imageBase64 = null;
-      targetLocation = null;
       markedLocation = null;
       isLocationMarked = false;
       remainingTime = timeForCurrentLevel;
@@ -651,25 +751,19 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     _controller.reset();
 
     if (showLevelUpOverlay) {
-      // Show level up overlay for 3 seconds before starting next round
+      // During level up overlay, we have time to load next image
       Future.delayed(const Duration(seconds: 3), () {
         if (mounted) {
           setState(() {
             showLevelUpOverlay = false;
           });
-          loadRandomImage().then((_) {
-            if (mounted) {
-              startCountDown();
-            }
-          });
-        }
-      });
-    } else {
-      loadRandomImage().then((_) {
-        if (mounted) {
+          // The image should already be preloaded
           startCountDown();
         }
       });
+    } else {
+      // The image should already be preloaded
+      startCountDown();
     }
   }
 
