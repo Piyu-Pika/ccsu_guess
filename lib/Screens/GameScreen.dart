@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'dart:typed_data';
 import 'package:ccsu_guess/Screens/home_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -343,7 +344,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     if (markedLocation != null) {
       calculateScore();
       resetRound();
-      loadRandomImage();
     } else {
       showDialog(
         context: context,
@@ -417,9 +417,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         return;
       }
 
-      // If we have images in queue, use them first
+      // If we have images in queue, select a random one instead of the first
       if (imageQueue.isNotEmpty) {
-        final nextImage = imageQueue.removeAt(0);
+        final randomIndex = Random().nextInt(imageQueue.length);
+        final nextImage = imageQueue.removeAt(randomIndex);
         _processImageData(nextImage);
 
         // Preload the next image in the background
@@ -432,7 +433,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           .collection('images')
           .where(FieldPath.documentId,
               whereNotIn: usedImageIds.isEmpty ? null : usedImageIds.toList())
-          .limit(10) // Load multiple at once for the queue
+          .limit(20) // Increased limit to get more images for random selection
           .get();
 
       if (querySnapshot.docs.isEmpty) {
@@ -451,7 +452,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         }
       }
 
-      // Process the first image from queue
+      // Shuffle the queue to ensure randomness
+      imageQueue.shuffle();
+
+      // Process a random image from queue
       if (imageQueue.isNotEmpty) {
         final nextImage = imageQueue.removeAt(0);
         _processImageData(nextImage);
@@ -499,14 +503,16 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     }
   }
 
-// New method to preload the next image in background
+// Modified method to preload a random next image in background
   Future<void> _preloadNextImage() async {
     if (isNextImageLoading || imageQueue.isEmpty) return;
 
     isNextImageLoading = true;
 
     try {
-      final nextImage = imageQueue[0];
+      // Select a random image from the queue but don't remove it yet
+      final randomIndex = Random().nextInt(imageQueue.length);
+      final nextImage = imageQueue[randomIndex];
       final data = nextImage['data'];
       final base64Code = data['imageCode'];
 
@@ -530,6 +536,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
         // Pre-cache the next image
         precacheImage(MemoryImage(bytes), context);
+
+        // Now remove this image from the queue since we've preloaded it
+        imageQueue.removeAt(randomIndex);
       }
     } catch (e) {
       print('Error preloading next image: $e');
@@ -705,6 +714,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             ElevatedButton(
               onPressed: () async {
                 Navigator.of(context).pop();
+                loadRandomImage();
 
                 if (roundScore > 0 && distance != null && distance < 1000) {
                   resetRound();
